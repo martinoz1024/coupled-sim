@@ -84,6 +84,7 @@ public class PlayerSystem : MonoBehaviour
                 return _AvatarPrefab;
             case SpawnPointType.PlayerControlingCar:
             case SpawnPointType.PlayerInAIControlledCar:
+            case SpawnPointType.PlayerInAIControlledCarOnDrivingSeat:
                 return _AvatarPrefabDriver[carIdx];
             default:
                 Assert.IsFalse(true, $"Invalid SpawnPointType: {type}");
@@ -94,17 +95,21 @@ public class PlayerSystem : MonoBehaviour
     public void SpawnLocalPlayer(SpawnPoint spawnPoint, int player, ExperimentRoleDefinition role)
     {
         bool isPassenger = spawnPoint.Type == SpawnPointType.PlayerInAIControlledCar;
+        bool isDriverInAIControlledCar = spawnPoint.Type == SpawnPointType.PlayerInAIControlledCarOnDrivingSeat;
         LocalPlayer = SpawnAvatar(spawnPoint, GetAvatarPrefab(spawnPoint.Type, role.carIdx), player, role);
         LocalPlayer.Initialize(false, PlayerInputMode, isPassenger ? ControlMode.Passenger : ControlMode.Driver, spawnPoint.VehicleType, spawnPoint.CameraIndex);
-        if (isPassenger)
+        if (isPassenger || isDriverInAIControlledCar)
         {
             var waypointFollow = LocalPlayer.GetComponent<WaypointProgressTracker>();
             Assert.IsNotNull(waypointFollow);
             waypointFollow.Init(role.AutonomousPath);
             LocalPlayer.gameObject.layer = LayerMask.NameToLayer(role.AutonomousIsYielding ? "Yielding" : "Car");
 
-            var hmiControl = LocalPlayer.GetComponent<ClientHMIController>();
-            hmiControl.Init(_hmiManager);
+            if (isPassenger)
+            {
+                var hmiControl = LocalPlayer.GetComponent<ClientHMIController>();
+                hmiControl.Init(_hmiManager);
+            }
         }
     }
 
